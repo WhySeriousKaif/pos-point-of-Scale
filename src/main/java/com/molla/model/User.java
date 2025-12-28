@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.Email;
 import lombok.*;
 
@@ -33,6 +34,9 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @ManyToOne
+    private Store store;
+
     private String phone;
 
     @Column( nullable = false)
@@ -52,5 +56,6 @@ public class User {
     public UserRole getRole() {
         return role;
     }
+
 
 }
