@@ -9,5 +9,6 @@ public enum UserRole {
     ROLE_STORE_MANAGER,
     ROLE_STORE_ADMIN,
     ROLE_STORE_EMPLOYEE,
+    ROLE_BRANCH_CASHIER,
 
 }

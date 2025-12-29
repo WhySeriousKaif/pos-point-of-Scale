@@ -1,4 +1,11 @@
 package com.molla.repository;
 
-public class BranchRepository {
+import com.molla.model.Branch;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface BranchRepository extends JpaRepository<Branch, Long> {
+
+    List<Branch> findByStoreId(Long storeId);
 }
