@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
 import com.molla.service.UserService;
-import com.molla.payload.dto.UserDto;
+import com.molla.payload.dto.UserDto;   
 import com.molla.exceptions.UserException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -31,5 +33,10 @@ public class UserController {
         }
         return  ResponseEntity.ok(UserMapper.toDto(user));
 
+    }
+    @GetMapping("/all")
+    public ResponseEntity<List<UserDto>> getAllUsers() throws UserException {
+        List<User> users = userService.getAllUsers();
+        return ResponseEntity.ok(users.stream().map(UserMapper::toDto).collect(Collectors.toList()));
     }
 }

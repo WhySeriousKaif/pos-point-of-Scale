@@ -82,4 +82,10 @@ public class ProductServiceImp implements ProductService {
     List<Product> products=productRepository.searchByKeyword(storeId,keyword);
     return products.stream().map(ProductMapper::toDto).collect(Collectors.toList());
     }
+
+    @Override
+    public List<ProductDto> getAllProducts(Long storeId) {
+    List<Product> products=productRepository.findByStoreId(storeId);
+    return products.stream().map(ProductMapper::toDto).collect(Collectors.toList());
+    }
 }

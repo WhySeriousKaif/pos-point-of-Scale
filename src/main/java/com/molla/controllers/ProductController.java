@@ -50,6 +50,11 @@ public class ProductController {
         return ResponseEntity.ok(productService.searchByKeyword(storeId,keyword));
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<List<ProductDto>> getAllProducts(@RequestHeader("Authorization") String jwt) throws UserException {
+        User user = userService.getUserFromJwt(jwt);
+        return ResponseEntity.ok(productService.getAllProducts(user.getStore().getId()));
+    }
     
     
 }

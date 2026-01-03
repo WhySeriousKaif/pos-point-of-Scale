@@ -33,3 +33,4 @@ WHERE tc.CONSTRAINT_SCHEMA = 'pos_db'
 AND tc.TABLE_NAME = 'user' 
 AND tc.CONSTRAINT_NAME = 'user_chk_1';
 
+
