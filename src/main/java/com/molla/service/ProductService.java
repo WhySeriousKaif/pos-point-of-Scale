@@ -13,5 +13,6 @@ public interface ProductService {
     List<ProductDto>getProductsById(Long storeId) ;
     List<ProductDto>searchByKeyword(Long storeId,String keyword) ;
     List<ProductDto>getAllProducts(Long storeId) ;
+    List<ProductDto>getAllProductsWithoutStoreFilter() ; // For testing - get all products
 
 }

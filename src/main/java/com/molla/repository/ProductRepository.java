@@ -6,10 +6,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByStoreId(Long storeId);
+    
+    Optional<Product> findBySku(String sku);
+    
+    // findAll() is already inherited from JpaRepository
 
     @Query("""
         SELECT p FROM Product p

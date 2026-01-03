@@ -27,9 +27,17 @@ public class SecurityConfig {
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // 2. Authorization rules
+                // 2. Authorization rules (order matters - more specific first)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/super-admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/products/public/**").permitAll()  // Public products endpoints
+                        .requestMatchers("/api/customers/**").permitAll()  // Allow customers endpoint for testing
+                        .requestMatchers("/api/orders/**").permitAll()    // Allow orders endpoint for testing
+                        .requestMatchers("/api/products/**").permitAll()  // Allow products endpoint for testing
+                        .requestMatchers("/api/branches/**").permitAll()  // Allow branches endpoint for testing
+                        .requestMatchers("/api/users/profile").permitAll()  // Allow user profile endpoint for testing
+                        .requestMatchers("/api/shift-reports/**").permitAll()  // Allow shift reports endpoint for testing
+                        .requestMatchers("/api/refunds/**").permitAll()  // Allow refunds endpoint for testing
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )

@@ -28,12 +28,26 @@ public class ProductServiceImp implements ProductService {
         productDto.getStoreId()
        ).orElseThrow(() -> new RuntimeException("Store not found"));
        Category category=categoryRepository.findById(productDto.getCategoryId()).orElseThrow(() -> new RuntimeException("Category not found"));
+       
+       // Check if SKU already exists
+       if (productDto.getSku() != null && !productDto.getSku().isEmpty()) {
+           productRepository.findBySku(productDto.getSku())
+               .ifPresent(existingProduct -> {
+                   throw new RuntimeException("Product with SKU '" + productDto.getSku() + "' already exists");
+               });
+       }
+       
        Product product=ProductMapper.toEntity(productDto,store,category);
-       Product savedProduct=productRepository.save(product);
-
-
-
-       return ProductMapper.toDto(savedProduct);
+       
+       try {
+           Product savedProduct=productRepository.save(product);
+           return ProductMapper.toDto(savedProduct);
+       } catch (org.springframework.dao.DataIntegrityViolationException e) {
+           if (e.getMessage() != null && e.getMessage().contains("Duplicate entry")) {
+               throw new RuntimeException("Product with SKU '" + productDto.getSku() + "' already exists");
+           }
+           throw new RuntimeException("Failed to create product: " + e.getMessage());
+       }
     }
 
     @Override
@@ -87,5 +101,11 @@ public class ProductServiceImp implements ProductService {
     public List<ProductDto> getAllProducts(Long storeId) {
     List<Product> products=productRepository.findByStoreId(storeId);
     return products.stream().map(ProductMapper::toDto).collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<ProductDto> getAllProductsWithoutStoreFilter() {
+        List<Product> products = productRepository.findAll();
+        return products.stream().map(ProductMapper::toDto).collect(Collectors.toList());
     }
 }

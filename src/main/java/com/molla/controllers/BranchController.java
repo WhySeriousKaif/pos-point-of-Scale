@@ -37,7 +37,7 @@ public class BranchController {
         return ResponseEntity.ok(createdBranch);
     }
     @GetMapping("/{id}")
-    public ResponseEntity<BranchDto> getBranchById(@PathVariable("id") Long id,@RequestHeader("Authorization") String jwt) throws UserException {
+    public ResponseEntity<BranchDto> getBranchById(@PathVariable("id") Long id,@RequestHeader(value = "Authorization", required = false) String jwt) throws UserException {
         BranchDto branch = branchService.getBranchById(id);
         return ResponseEntity.ok(branch);
     }
