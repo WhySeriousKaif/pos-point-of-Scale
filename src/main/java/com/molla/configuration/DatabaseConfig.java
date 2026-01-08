@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -37,8 +36,9 @@ public class DatabaseConfig {
 
     @Bean
     @Primary
-    @ConfigurationProperties("spring.datasource")
     public DataSourceProperties dataSourceProperties() {
+        // Create fresh properties object - don't bind from application.properties
+        // to avoid picking up the bad mysql.railway.internal URL
         DataSourceProperties properties = new DataSourceProperties();
         
         logger.info("=== Database Configuration Debug ===");
@@ -129,11 +129,17 @@ public class DatabaseConfig {
         logger.error("No database connection details found!");
         logger.error("Please ensure one of the following is set:");
         logger.error("1. Railway MySQL service is linked to your app service");
-        logger.error("2. Or set SPRING_DATASOURCE_URL environment variable");
+        logger.error("2. Or set SPRING_DATASOURCE_URL environment variable (NOT mysql.railway.internal)");
         logger.error("3. Or set MYSQLHOST, MYSQLDATABASE, MYSQLUSER, MYSQLPASSWORD");
         logger.error("================================================");
         
-        return properties;
+        // Don't return properties with null/empty URL - this will cause Spring Boot to fail
+        // which is better than trying to connect to a non-existent host
+        throw new IllegalStateException(
+            "Database configuration not found. Please link Railway MySQL service or set valid database connection variables. " +
+            "Current SPRING_DATASOURCE_URL contains 'mysql.railway.internal' which is not accessible. " +
+            "Please remove SPRING_DATASOURCE_URL from Railway variables or update it to use the public MySQL hostname."
+        );
     }
 
     @Bean
