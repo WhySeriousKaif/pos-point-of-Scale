@@ -69,8 +69,15 @@ public class SecurityConfig {
 
                 CorsConfiguration config = new CorsConfiguration();
 
-                // Allow frontend URL
-                config.setAllowedOrigins(List.of("http://localhost:3000","http://localhost:5173"));
+                // Allow frontend URLs (development and production)
+                String allowedOrigins = System.getenv("ALLOWED_ORIGINS");
+                if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
+                    // Production: Use environment variable (comma-separated)
+                    config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+                } else {
+                    // Development: Default localhost URLs
+                    config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
+                }
 
                 // Allow HTTP methods
                 config.setAllowedMethods(List.of(
