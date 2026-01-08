@@ -1,6 +1,8 @@
 package com.molla.configuration;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,7 +15,9 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 public class SecurityConfig {
@@ -63,6 +67,8 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+        
         return new CorsConfigurationSource() {
             @Override
             public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
@@ -71,17 +77,30 @@ public class SecurityConfig {
 
                 // Allow frontend URLs (development and production)
                 String allowedOrigins = System.getenv("ALLOWED_ORIGINS");
+                String origin = request.getHeader("Origin");
+                
                 if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
                     // Production: Use environment variable (comma-separated)
-                    config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+                    // Trim whitespace from each origin
+                    List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .collect(Collectors.toList());
+                    
+                    config.setAllowedOrigins(origins);
+                    
+                    logger.info("CORS Configuration - Allowed Origins: {}", origins);
+                    logger.info("CORS Configuration - Request Origin: {}", origin);
                 } else {
                     // Development: Default localhost URLs
-                    config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
+                    List<String> defaultOrigins = List.of("http://localhost:3000", "http://localhost:5173");
+                    config.setAllowedOrigins(defaultOrigins);
+                    logger.warn("ALLOWED_ORIGINS not set, using default localhost origins: {}", defaultOrigins);
                 }
 
                 // Allow HTTP methods
                 config.setAllowedMethods(List.of(
-                        "GET", "POST", "PUT", "DELETE", "OPTIONS"
+                        "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
                 ));
 
                 // Allow headers
