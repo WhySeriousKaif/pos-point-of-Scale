@@ -108,19 +108,23 @@ public class AuthServiceImp implements AuthService {
     }
 
     private  Authentication authenticate(String email,String password){
-        UserDetails userDetails=customUserImplementation.loadUserByUsername(email);
-        if(!userDetails.getUsername().equals(email)){
-            return  null;
-        }
+        try {
+            UserDetails userDetails=customUserImplementation.loadUserByUsername(email);
+            if(!userDetails.getUsername().equals(email)){
+                return  null;
+            }
 
-        if(passwordEncoder.matches(password,userDetails.getPassword())){
-            return  new UsernamePasswordAuthenticationToken(
-                    userDetails.getUsername(),
-                    userDetails.getPassword(),
-                    userDetails.getAuthorities()
-            );
+            if(passwordEncoder.matches(password,userDetails.getPassword())){
+                return  new UsernamePasswordAuthenticationToken(
+                        userDetails.getUsername(),
+                        userDetails.getPassword(),
+                        userDetails.getAuthorities()
+                );
+            }
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            // User not found - return null to indicate authentication failed
+            return null;
         }
-
 
         return  null;
     }
