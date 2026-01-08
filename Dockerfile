@@ -3,16 +3,10 @@
 
     WORKDIR /app
     
-    # Copy pom.xml first (IMPORTANT for Maven)
     COPY pom.xml .
-    
-    # Download dependencies
     RUN mvn dependency:go-offline -B
     
-    # Copy source code
     COPY src ./src
-    
-    # Build JAR
     RUN mvn clean package -DskipTests
     
     # ---------- RUNTIME STAGE ----------
@@ -20,7 +14,6 @@
     
     WORKDIR /app
     
-    # Copy JAR from build stage
     COPY --from=build /app/target/*.jar app.jar
     
     EXPOSE 5001
