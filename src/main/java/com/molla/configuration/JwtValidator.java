@@ -25,6 +25,13 @@ public class JwtValidator extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // Skip JWT validation for auth endpoints (login, signup)
+        String path = request.getRequestURI();
+        if (path != null && path.startsWith("/auth/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // 1. Read Authorization header from request
         String authHeader = request.getHeader(JwtConstant.JWT_HEADERS);
 

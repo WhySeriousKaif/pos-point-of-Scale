@@ -46,6 +46,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )
+                
+                // Ensure CORS preflight OPTIONS requests are allowed
+                .headers(headers -> headers.frameOptions().disable())
 
                 // 3. JWT filter
                 .addFilterBefore(new JwtValidator(), BasicAuthenticationFilter.class)
