@@ -33,6 +33,7 @@ public class SecurityConfig {
 
                 // 2. Authorization rules (order matters - more specific first)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // Allow OPTIONS for CORS preflight
                         .requestMatchers("/auth/**").permitAll()  // Allow auth endpoints (login, signup)
                         .requestMatchers("/api/super-admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/products/public/**").permitAll()  // Public products endpoints
@@ -83,23 +84,33 @@ public class SecurityConfig {
                 String origin = request.getHeader("Origin");
                 
                 List<String> origins;
-                if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
-                    // Production: Use environment variable (comma-separated)
-                    // Trim whitespace and strip any accidental leading '=' from each origin
-                    origins = Arrays.stream(allowedOrigins.split(","))
-                            .map(String::trim)
-                            .map(s -> s.startsWith("=") ? s.substring(1) : s)
-                            .filter(s -> !s.isEmpty())
-                            .collect(Collectors.toList());
-                } else {
-                    // Development: Default localhost URLs
-                    origins = List.of("http://localhost:3000", "http://localhost:5173");
-                    logger.warn("ALLOWED_ORIGINS not set, using default localhost origins: {}", origins);
-                }
+                       if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
+                           // Production: Use environment variable (comma-separated)
+                           // Trim whitespace and strip any accidental leading '=' from each origin
+                           origins = Arrays.stream(allowedOrigins.split(","))
+                                   .map(String::trim)
+                                   .map(s -> s.startsWith("=") ? s.substring(1) : s)
+                                   .filter(s -> !s.isEmpty())
+                                   .collect(Collectors.toList());
+                       } else {
+                           // Development: Allow any localhost port
+                           // List all common localhost ports explicitly for better compatibility
+                           origins = List.of(
+                               "http://localhost:3000",
+                               "http://localhost:5173",
+                               "http://localhost:5174",
+                               "http://localhost:5175",
+                               "http://localhost:8080",
+                               "http://127.0.0.1:3000",
+                               "http://127.0.0.1:5173",
+                               "http://127.0.0.1:5174"
+                           );
+                           logger.warn("ALLOWED_ORIGINS not set, using default localhost origins: {}", origins);
+                       }
 
-                // Use origin *patterns* instead of exact origins so Spring will match dynamically.
-                // This is more robust across proxies and scheme/port nuances.
-                config.setAllowedOriginPatterns(origins);
+                       // Use origin *patterns* instead of exact origins so Spring will match dynamically.
+                       // This is more robust across proxies and scheme/port nuances.
+                       config.setAllowedOriginPatterns(origins);
 
                 logger.info("CORS Configuration - Allowed Origin Patterns: {}", origins);
                 logger.info("CORS Configuration - Request Origin: {}", origin);
