@@ -694,7 +694,8 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-**Molla POS System Development Team**
+**MD Kaif Molla**
+**https://github.com/WhySeriousKaif**
 
 ---
 
