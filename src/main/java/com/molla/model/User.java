@@ -37,16 +37,17 @@ public class User {
     private String password;
 
     @ManyToOne
-    private Store store;
+    private Store store; // manyToOne means - one user can have many stores
 
     @ManyToOne
-    private Branch branch;
+    private Branch branch; // manyToOne means - one user can have many branches
 
     private String phone;
 
     @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.STRING) // EnumType.STRING means - the role is stored as a string in the database // EnumType.ORDINAL means - the role is stored as a number in the database
     private UserRole role;
+
     private LocalDateTime createdAt;
     private  LocalDateTime updatedAt;
     private  LocalDateTime lastLoginAt;

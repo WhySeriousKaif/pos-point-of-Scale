@@ -27,7 +27,7 @@ public class Branch {
 
     private String email;
 
-    @ElementCollection
+    @ElementCollection // ElementCollection means - the workingDays is stored as a list of strings in the database
     private List<String> workingDays;
 
     private LocalTime openTime;
@@ -39,14 +39,14 @@ public class Branch {
     @ManyToOne
     private Store store; //many branches belong to one store
 
-    @OneToOne(cascade = CascadeType.REMOVE)
+    @OneToOne(cascade = CascadeType.REMOVE) // CascadeType.REMOVE means - when the branch is deleted, the manager is also deleted
     private  User manager; //one branch has one manager
 
-    @PreUpdate
+    @PreUpdate // PreUpdate means - before the branch is updated, the updatedAt is set to the current time
     protected void onUpdate(){
         updatedAt=LocalDateTime.now();
     }
-    @PrePersist
+    @PrePersist // PrePersist means - before the branch is saved, the createdAt is set to the current time
     protected void onCreate(){
         createdAt=LocalDateTime.now();
     }

@@ -19,6 +19,11 @@ import com.molla.repository.UserRepository;
 import com.molla.service.OrderService;
 import com.molla.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -128,6 +133,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"orders", "recentOrdersByBranch"}, allEntries = true)
     public OrderDto updateOrder(Long id, OrderDto orderDto) throws Exception {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new Exception("Order not found"));
@@ -145,6 +151,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"orders", "recentOrdersByBranch"}, allEntries = true)
     public void deleteOrder(Long id) throws Exception {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new Exception("Order not found with id " + id));
@@ -152,6 +159,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Cacheable(cacheNames = "orders", key = "#id")
     public OrderDto getOrderById(Long id) throws Exception {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new Exception("Order not found"));
@@ -195,9 +203,31 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Cacheable(cacheNames = "recentOrdersByBranch", key = "#branchId")
     public List<OrderDto> getTop5RecentOrdersByBranchId(Long branchId) throws Exception {
         return orderRepository.findTop5ByBranchIdOrderByCreatedAtDesc(branchId).stream()
             .map(OrderMapper::toDto)
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<OrderDto> getOrdersByBranchPaged(Long branchId, int page, int size, String sortBy, String direction) throws Exception {
+        if (page < 0) page = 0;
+        if (size <= 0 || size > 100) size = 10;
+        if (sortBy == null || sortBy.isBlank()) {
+            sortBy = "createdAt";
+        }
+        if (direction == null || direction.isBlank()) {
+            direction = "desc";
+        }
+
+        Sort sort = direction.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        PageRequest pageable = PageRequest.of(page, size, sort);
+
+        Page<Order> pageResult = orderRepository.findByBranchId(branchId, pageable);
+        return pageResult.map(OrderMapper::toDto);
     }
 }

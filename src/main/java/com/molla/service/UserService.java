@@ -1,17 +1,14 @@
 package com.molla.service;
 
-import java.util.List;
-
-import com.molla.exceptions.UserException;
 import com.molla.model.User;
+
+import java.util.List;
 
 public interface UserService {
 
-    User getUserFromJwt(String jwt) throws UserException;
-    User getCurrentUser() throws UserException;
-    User getUserByEmail(String email) throws UserException;
+    User getUserFromJwt(String jwt);
+    User getCurrentUser();
+    User getUserByEmail(String email);
     User getUserById(Long id);
     List<User> getAllUsers();
-
-    
 }

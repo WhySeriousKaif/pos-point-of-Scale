@@ -1,6 +1,5 @@
 package com.molla.service.impl;
 
-import com.molla.configuration.JwtProvider;
 import com.molla.domain.UserRole;
 import com.molla.exceptions.UserException;
 import com.molla.mapper.UserMapper;
@@ -9,7 +8,11 @@ import com.molla.payload.dto.UserDto;
 import com.molla.payload.response.AuthResponse;
 import com.molla.repository.UserRepository;
 import com.molla.service.AuthService;
+import com.molla.service.MailService;
+import com.molla.service.impl.CustomUserImplementation;
+import com.molla.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,9 +29,13 @@ public class AuthServiceImp implements AuthService {
 
     private  final PasswordEncoder passwordEncoder;
 
-    private final JwtProvider jwtProvider;
+    private final JwtUtil jwtUtil;
 
     private  final CustomUserImplementation customUserImplementation;
+
+    // Optional email service (only active when spring.mail.host is configured)
+    @Autowired(required = false)
+    private MailService mailService;
 
 
 
@@ -56,13 +63,30 @@ public class AuthServiceImp implements AuthService {
 
         userRepository.save(newUser);
 
+        // Send welcome email (best-effort – failures are ignored so signup still works)
+        if (mailService != null) {
+            try {
+                mailService.sendSimpleMail(
+                        newUser.getEmail(),
+                        "Welcome to Molla POS",
+                        "Hi " + newUser.getFullName() + ",\n\n" +
+                                "Your account has been created successfully.\n\n" +
+                                "Role: " + newUser.getRole() + "\n\n" +
+                                "Regards,\nMolla POS System"
+                );
+            } catch (Exception e) {
+                // Log and continue (you can hook into a logger if needed)
+                System.out.println("Failed to send welcome email: " + e.getMessage());
+            }
+        }
+
         Authentication authentication=
                 new UsernamePasswordAuthenticationToken(user.getEmail(),user.getPassword());
 
         SecurityContextHolder.getContext()
                 .setAuthentication(authentication);
 
-        String jwt=jwtProvider.generateToken(authentication);
+        String jwt=jwtUtil.generateToken(newUser.getEmail(), newUser.getRole().name());
 
         AuthResponse authResponse=new AuthResponse();
         authResponse.setJwt(jwt);
@@ -87,13 +111,13 @@ public class AuthServiceImp implements AuthService {
             throw new UserException("Invalid email or password");
         }
         
-        String jwt=jwtProvider.generateToken(authentication);
-
         User foundUser=userRepository.findByEmail(email);
         
         if (foundUser == null) {
             throw new UserException("User not found");
         }
+        
+        String jwt=jwtUtil.generateToken(foundUser.getEmail(), foundUser.getRole().name());
 
         foundUser.setLastLoginAt(LocalDateTime.now());
 
@@ -109,18 +133,18 @@ public class AuthServiceImp implements AuthService {
 
     private  Authentication authenticate(String email,String password){
         try {
-            UserDetails userDetails=customUserImplementation.loadUserByUsername(email);
-            if(!userDetails.getUsername().equals(email)){
-                return  null;
-            }
+        UserDetails userDetails=customUserImplementation.loadUserByUsername(email);
+        if(!userDetails.getUsername().equals(email)){
+            return  null;
+        }
 
-            if(passwordEncoder.matches(password,userDetails.getPassword())){
-                return  new UsernamePasswordAuthenticationToken(
-                        userDetails.getUsername(),
-                        userDetails.getPassword(),
-                        userDetails.getAuthorities()
-                );
-            }
+        if(passwordEncoder.matches(password,userDetails.getPassword())){
+            return  new UsernamePasswordAuthenticationToken(
+                    userDetails.getUsername(),
+                    userDetails.getPassword(),
+                    userDetails.getAuthorities()
+            );
+        }
         } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
             // User not found - return null to indicate authentication failed
             return null;

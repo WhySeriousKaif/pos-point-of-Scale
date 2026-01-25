@@ -6,6 +6,7 @@ import com.molla.payload.dto.OrderDto;
 import com.molla.payload.response.ApiResponse;
 import com.molla.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,6 +50,22 @@ public class OrderController {
             @RequestParam(required = false) PaymentType paymentType,
             @RequestParam(required = false) OrderStatus orderStatus) throws Exception {
         return ResponseEntity.ok(orderService.getOrdersByBranch(branchId, customerId, cashierId, paymentType, orderStatus));
+    }
+
+    /**
+     * Paginated + sorted orders listing for a branch.
+     * Example: /api/orders/branch/1/paged?page=0&size=10&sortBy=createdAt&direction=desc
+     */
+    @GetMapping("/branch/{branchId}/paged")
+    public ResponseEntity<Page<OrderDto>> getOrdersByBranchPaged(
+            @PathVariable("branchId") Long branchId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction
+    ) throws Exception {
+        Page<OrderDto> result = orderService.getOrdersByBranchPaged(branchId, page, size, sortBy, direction);
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/cashier/{cashierId}")

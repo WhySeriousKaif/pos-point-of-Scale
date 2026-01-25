@@ -19,6 +19,7 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/profile")
+
     public ResponseEntity<UserDto> getUserProfile(@RequestHeader(value = "Authorization", required = false) String jwt) throws UserException {
         // For testing, if no JWT, return a default user with branch
         if (jwt == null || jwt.isEmpty()) {

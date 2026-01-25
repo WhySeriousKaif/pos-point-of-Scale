@@ -1,7 +1,8 @@
 package com.molla.service.impl;
 
 import com.molla.domain.UserRole;
-import com.molla.exceptions.UserException;
+import com.molla.exceptions.BadRequestException;
+import com.molla.exceptions.NotFoundException;
 import com.molla.mapper.CategoryMapper;
 import com.molla.model.Category;
 import com.molla.model.Store;
@@ -11,6 +12,8 @@ import com.molla.repository.CategoryRepository;
 import com.molla.repository.StoreRepository;
 import com.molla.service.CategoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,10 +24,11 @@ import java.util.stream.Collectors;
 public class CategoryServiceImp implements CategoryService {
     private final CategoryRepository categoryRepository;
     private final StoreRepository storeRepository;
+    
     @Override
-    public CategoryDto createCategory(CategoryDto categoryDto, User user) throws UserException {
+    public CategoryDto createCategory(CategoryDto categoryDto, User user) {
         Store store = storeRepository.findById(categoryDto.getStoreId())
-                .orElseThrow(() -> new RuntimeException("Store not found"));
+                .orElseThrow(() -> new NotFoundException("Store not found with id: " + categoryDto.getStoreId()));
         checkAuthority(user, store);
         
         Category category = new Category();
@@ -34,16 +38,19 @@ public class CategoryServiceImp implements CategoryService {
        
         return CategoryMapper.toDto(categoryRepository.save(category));
     }
+    
     @Override
-    public List<CategoryDto> getCategoriesByStoreId(Long storeId) throws UserException {
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "categoriesByStore", key = "#storeId")
+    public List<CategoryDto> getCategoriesByStoreId(Long storeId) {
         List<Category> categories = categoryRepository.findByStoreId(storeId);
         return categories.stream().map(CategoryMapper::toDto).collect(Collectors.toList());
     }
 
     @Override
-    public CategoryDto updateCategory(Long id, CategoryDto categoryDto, User user) throws UserException {
+    @CacheEvict(cacheNames = "categoriesByStore", allEntries = true)
+    public CategoryDto updateCategory(Long id, CategoryDto categoryDto, User user) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new NotFoundException("Category not found with id: " + id));
 
         category.setName(categoryDto.getName());
         category.setDescription(categoryDto.getDescription());
@@ -53,9 +60,9 @@ public class CategoryServiceImp implements CategoryService {
     }
     
     @Override
-    public CategoryDto moderateCategory(Long id, CategoryDto categoryDto, User user) throws UserException {
+    public CategoryDto moderateCategory(Long id, CategoryDto categoryDto, User user) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new NotFoundException("Category not found with id: " + id));
         checkAuthority(user, category.getStore());
         
         category.setName(categoryDto.getName());
@@ -64,16 +71,17 @@ public class CategoryServiceImp implements CategoryService {
     }
     
     @Override
-    public void deleteCategory(Long id, User user) throws UserException {
+    @CacheEvict(cacheNames = "categoriesByStore", allEntries = true)
+    public void deleteCategory(Long id, User user) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new NotFoundException("Category not found with id: " + id));
         checkAuthority(user, category.getStore()); 
         categoryRepository.delete(category);
     }
 
-    private void checkAuthority(User user, Store store) throws UserException {
+    private void checkAuthority(User user, Store store) {
         if(store == null) {
-            throw new UserException("Store not found");
+            throw new NotFoundException("Store not found");
         }
         
         boolean isAdmin = user.getRole().equals(UserRole.ROLE_STORE_ADMIN);
@@ -85,10 +93,7 @@ public class CategoryServiceImp implements CategoryService {
         }
 
         if(!(isAdmin || isManager) && !isSameStore) {
-            throw new UserException("You don't have permission to access this category");
+            throw new BadRequestException("You don't have permission to access this category");
         }
     }
-
-    
-    
 }

@@ -4,6 +4,7 @@ import com.molla.domain.StoreStatus;
 import com.molla.exceptions.UserException;
 import com.molla.model.User;
 import com.molla.payload.dto.StoreDto;
+import com.molla.payload.dto.UserDto;
 import com.molla.payload.response.ApiResponse;
 import com.molla.service.StoreService;
 import com.molla.service.UserService;
@@ -40,22 +41,25 @@ public class StoreController {
    @GetMapping("/admin")
    public ResponseEntity<List<StoreDto>> getStoreByAdmin(@RequestHeader("Authorization") String jwt) throws UserException {
     User user = userService.getUserFromJwt(jwt);
-    try {
-    StoreDto store = storeService.getStoreByAdmin(user);
-    return ResponseEntity.ok(List.of(store));
-    } catch (UserException e) {
-        // If store not found, return empty list instead of throwing exception
-        if (e.getMessage() != null && e.getMessage().contains("Store not found")) {
-            return ResponseEntity.ok(List.of());
-        }
-        throw e;
-    }
+       return ResponseEntity.ok(storeService.getStoresForAdmin(user));
    }
    @GetMapping("/employee")
    public ResponseEntity<StoreDto> getStoreByEmployee(@RequestHeader("Authorization") String jwt) throws UserException {
      User user = userService.getUserFromJwt(jwt);
      String brand = user.getStore() != null ? user.getStore().getBrand() : "";
      return ResponseEntity.ok(storeService.getStoreByEmployee(brand));
+   }
+
+   @GetMapping("/my")
+   public ResponseEntity<StoreDto> getMyStore(@RequestHeader("Authorization") String jwt) throws UserException {
+       User user = userService.getUserFromJwt(jwt);
+       return ResponseEntity.ok(storeService.getMyStore(user));
+   }
+
+   @GetMapping("/my/employees")
+   public ResponseEntity<List<UserDto>> getMyStoreEmployees(@RequestHeader("Authorization") String jwt) throws UserException {
+       User user = userService.getUserFromJwt(jwt);
+       return ResponseEntity.ok(storeService.getMyStoreEmployees(user));
    }
    @PutMapping("/{id}")
    public ResponseEntity<StoreDto> updateStore(@PathVariable("id") Long id,@RequestBody StoreDto storeDto,@RequestHeader("Authorization") String jwt) throws UserException {
@@ -69,9 +73,13 @@ public class StoreController {
    }
 
    @PutMapping("/{id}/moderate")
-   public ResponseEntity<StoreDto> moderateStore(@PathVariable("id") Long id,@RequestBody StoreStatus storeStatus) throws UserException {
-    
-    return ResponseEntity.ok(storeService.moderateStore(id,storeStatus));
+   public ResponseEntity<StoreDto> moderateStore(
+           @PathVariable("id") Long id,
+           @RequestBody StoreStatus storeStatus,
+           @RequestHeader("Authorization") String jwt) throws UserException {
+       // Validate JWT token - service layer will check if user is Super Admin
+       userService.getUserFromJwt(jwt);
+       return ResponseEntity.ok(storeService.moderateStore(id, storeStatus));
    }
 
 

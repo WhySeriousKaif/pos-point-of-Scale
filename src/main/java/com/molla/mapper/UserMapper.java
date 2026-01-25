@@ -8,6 +8,25 @@ import java.time.LocalDateTime;
 
 public class UserMapper {
 
+    /**
+     * 📦 Convert User Entity to User DTO
+     * "UserMapper converts between User entity and UserDto to separate database models from API responses."
+     * 
+     * 👉 Purpose: Map User entity to User DTO for API response
+     * 🔹 Flow: Map fields → Set branch/store IDs if available
+     * 
+     * 📌 UserDto Structure:
+     * - id: User ID
+     * - fullName: User's full name
+     * - email: User's email
+     * - phone: User's phone number
+     * - role: User's role
+     * - branchId: Branch ID (if available)
+     * - storeId: Store ID (if available)
+     * - createdAt: User creation timestamp
+     * - updatedAt: Last update timestamp
+     * - lastLoginAt: Last login timestamp
+     */
     public static UserDto toDto(User newUser) {
         UserDto userDto = new UserDto();
         userDto.setId(newUser.getId());

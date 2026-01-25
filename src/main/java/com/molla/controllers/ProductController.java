@@ -21,33 +21,18 @@ public class ProductController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<?> createProduct(@RequestBody ProductDto productDto,@RequestHeader(value = "Authorization", required = false) String jwt) {
-        try {
-            User user = null;
-            if (jwt != null && !jwt.isEmpty()) {
-                try {
-                    user = userService.getUserFromJwt(jwt);
-                } catch (Exception e) {
-                    // If JWT is invalid, continue without user (for testing)
-                }
+    public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto productDto,@RequestHeader(value = "Authorization", required = false) String jwt) throws UserException {
+        User user = null;
+        if (jwt != null && !jwt.isEmpty()) {
+            try {
+                user = userService.getUserFromJwt(jwt);
+            } catch (Exception e) {
+                // If JWT is invalid, continue without user (for testing)
+                // GlobalExceptionHandler will catch and format exceptions from service layer
             }
-            ProductDto createdProduct = productService.createProduct(productDto, user);
-            return ResponseEntity.ok(createdProduct);
-        } catch (RuntimeException e) {
-            // Return 400 Bad Request for validation errors
-            if (e.getMessage() != null && (e.getMessage().contains("already exists") || 
-                e.getMessage().contains("not found") || 
-                e.getMessage().contains("required"))) {
-                return ResponseEntity.badRequest()
-                    .body(new ApiResponse(e.getMessage()));
-            }
-            // Return 500 for other errors
-            return ResponseEntity.status(500)
-                .body(new ApiResponse("Internal server error: " + e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(500)
-                .body(new ApiResponse("Internal server error: " + e.getMessage()));
         }
+        ProductDto createdProduct = productService.createProduct(productDto, user);
+        return ResponseEntity.ok(createdProduct);
     }
 
     @PutMapping("/{id}")

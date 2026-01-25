@@ -3,6 +3,7 @@ package com.molla.service;
 import com.molla.domain.OrderStatus;
 import com.molla.domain.PaymentType;
 import com.molla.payload.dto.OrderDto;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -16,4 +17,9 @@ public interface OrderService {
     List<OrderDto> getTodayOrderbyBranch(Long branchId) throws Exception;
     List<OrderDto> getOrderByCustomerId(Long customerId) throws Exception;
     List<OrderDto> getTop5RecentOrdersByBranchId(Long branchId) throws Exception;
+
+    /**
+     * Paginated + sorted orders listing for a branch.
+     */
+    Page<OrderDto> getOrdersByBranchPaged(Long branchId, int page, int size, String sortBy, String direction) throws Exception;
 }

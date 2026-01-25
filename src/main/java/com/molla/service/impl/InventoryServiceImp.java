@@ -10,6 +10,8 @@ import com.molla.repository.InventoryRepository;
 import com.molla.repository.ProductRepository;
 import com.molla.service.InventoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -47,6 +49,7 @@ public class InventoryServiceImp implements InventoryService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"inventory", "inventoriesByBranch"}, allEntries = true)
     public InventoryDto updateInventory(InventoryDto inventoryDto, Long id) {
         Inventory existingInventory = inventoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Inventory not found"));
@@ -56,6 +59,7 @@ public class InventoryServiceImp implements InventoryService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"inventory", "inventoriesByBranch"}, allEntries = true)
     public void deleteInventory(Long id) {
         Inventory inventory = inventoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Inventory not found"));
@@ -63,6 +67,7 @@ public class InventoryServiceImp implements InventoryService {
     }
 
     @Override
+    @Cacheable(cacheNames = "inventory", key = "#productId + '_' + #branchId")
     public InventoryDto getInventoryByProductIdAndBranchId(Long productId, Long branchId) {
         Inventory inventory = inventoryRepository.findByProductIdAndBranchId(productId, branchId)
                 .orElseThrow(() -> new RuntimeException("Inventory not found"));
@@ -70,6 +75,7 @@ public class InventoryServiceImp implements InventoryService {
     }
 
     @Override
+    @Cacheable(cacheNames = "inventoriesByBranch", key = "#branchId")
     public List<InventoryDto> getAllInventoriesByBranchId(Long branchId) {
         List<Inventory> inventories = inventoryRepository.findByBranchId(branchId);
         return inventories.stream()

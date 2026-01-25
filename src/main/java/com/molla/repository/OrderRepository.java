@@ -1,10 +1,10 @@
 package com.molla.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-
 import com.molla.model.Order;
 import com.molla.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,4 +18,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findTop5ByBranchIdOrderByCreatedAtDesc(Long branchId);
 
+    // Pagination + sorting for orders list by branch
+    Page<Order> findByBranchId(Long branchId, Pageable pageable);
 }

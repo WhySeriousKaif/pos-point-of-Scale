@@ -34,6 +34,15 @@ public class DatabaseConfig {
     @Value("${MYSQLPASSWORD:}")
     private String mysqlPassword;
 
+    @Value("${spring.datasource.url:}")
+    private String appDataSourceUrl;
+
+    @Value("${spring.datasource.username:}")
+    private String appDataSourceUsername;
+
+    @Value("${spring.datasource.password:}")
+    private String appDataSourcePassword;
+
     @Bean
     @Primary
     public DataSourceProperties dataSourceProperties() {
@@ -87,7 +96,7 @@ public class DatabaseConfig {
         }
         
         // Priority 3: Check for SPRING_DATASOURCE_URL from environment
-        // BUT: Skip if it contains mysql.railway.internal (internal hostname that doesn't work)
+        // BUT: Skip if it contains mysql.railway.internal (internal hostname that doesn't work locally)
         String springUrl = System.getenv("SPRING_DATASOURCE_URL");
         String springUser = System.getenv("SPRING_DATASOURCE_USERNAME");
         String springPass = System.getenv("SPRING_DATASOURCE_PASSWORD");
@@ -104,22 +113,20 @@ public class DatabaseConfig {
             return properties;
         } else if (springUrl != null && springUrl.contains("mysql.railway.internal")) {
             logger.warn("SPRING_DATASOURCE_URL contains mysql.railway.internal (internal hostname). " +
-                      "Ignoring and trying Railway MySQL variables instead.");
+                      "Ignoring and falling back to application.properties.");
         }
         
         // Priority 4: Fall back to application.properties values
-        String appPropsUrl = System.getProperty("spring.datasource.url");
-        if (appPropsUrl != null && !appPropsUrl.isEmpty()) {
-            properties.setUrl(appPropsUrl);
-            String appPropsUser = System.getProperty("spring.datasource.username");
-            String appPropsPass = System.getProperty("spring.datasource.password");
-            if (appPropsUser != null && !appPropsUser.isEmpty()) {
-                properties.setUsername(appPropsUser);
+        if (appDataSourceUrl != null && !appDataSourceUrl.isEmpty()) {
+            properties.setUrl(appDataSourceUrl.trim());
+            if (appDataSourceUsername != null && !appDataSourceUsername.isEmpty()) {
+                properties.setUsername(appDataSourceUsername.trim());
             }
-            if (appPropsPass != null && !appPropsPass.isEmpty()) {
-                properties.setPassword(appPropsPass);
+            if (appDataSourcePassword != null && !appDataSourcePassword.isEmpty()) {
+                properties.setPassword(appDataSourcePassword.trim());
             }
-            logger.info("Using values from application.properties");
+            logger.info("Using database configuration from application.properties");
+            logger.info("URL: {}", appDataSourceUrl.replaceAll(":[^:@]+@", ":****@"));
             return properties;
         }
         
@@ -131,14 +138,12 @@ public class DatabaseConfig {
         logger.error("1. Railway MySQL service is linked to your app service");
         logger.error("2. Or set SPRING_DATASOURCE_URL environment variable (NOT mysql.railway.internal)");
         logger.error("3. Or set MYSQLHOST, MYSQLDATABASE, MYSQLUSER, MYSQLPASSWORD");
+        logger.error("4. Or configure spring.datasource.* in application.properties");
         logger.error("================================================");
         
-        // Don't return properties with null/empty URL - this will cause Spring Boot to fail
-        // which is better than trying to connect to a non-existent host
         throw new IllegalStateException(
             "Database configuration not found. Please link Railway MySQL service or set valid database connection variables. " +
-            "Current SPRING_DATASOURCE_URL contains 'mysql.railway.internal' which is not accessible. " +
-            "Please remove SPRING_DATASOURCE_URL from Railway variables or update it to use the public MySQL hostname."
+            "If SPRING_DATASOURCE_URL contains 'mysql.railway.internal', please unset it to use application.properties."
         );
     }
 

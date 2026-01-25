@@ -6,13 +6,19 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
 @Data
-public class UserDto {
-    private Long id;
-
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Getter
+@Setter
+public class RegisterRequest {
     @NotBlank(message = "Full name is required")
     private String fullName;
 
@@ -22,17 +28,15 @@ public class UserDto {
 
     private String phone;
 
-    @NotNull(message = "Role is required")
-    private UserRole role;
-
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")
     private String password;
 
-    private Long branchId; 
+    @NotNull(message = "Role is required")
+    private UserRole role;
+
+    // Optional: For branch managers - assign to branch and store
+    private Long branchId;
     private Long storeId;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    private LocalDateTime lastLoginAt;
 }
