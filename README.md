@@ -132,7 +132,7 @@ Before running the application, ensure you have:
 
 ### Step 1: Clone the Repository
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/WhySeriousKaif/pos-point-of-Scale.git
 cd molla-pos-system
 ```
 
