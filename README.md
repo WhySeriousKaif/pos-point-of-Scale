@@ -701,7 +701,7 @@ This project is licensed under the MIT License.
 
 ## 📞 Support
 
-For support, email support@molla.com or open an issue in the repository.
+For support, email kaif00786001@gmail.com or open an issue in the repository.
 
 ---
 
