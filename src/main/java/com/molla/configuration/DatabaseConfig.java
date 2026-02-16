@@ -49,13 +49,14 @@ public class DatabaseConfig {
         // Create fresh properties object - don't bind from application.properties
         // to avoid picking up the bad mysql.railway.internal URL
         DataSourceProperties properties = new DataSourceProperties();
-        
+
         logger.info("=== Database Configuration Debug ===");
-        logger.info("MYSQLDATABASE_URL: {}", mysqlDatabaseUrl != null && !mysqlDatabaseUrl.isEmpty() ? "SET" : "NOT SET");
+        logger.info("MYSQLDATABASE_URL: {}",
+                mysqlDatabaseUrl != null && !mysqlDatabaseUrl.isEmpty() ? "SET" : "NOT SET");
         logger.info("MYSQLHOST: {}", mysqlHost != null && !mysqlHost.isEmpty() ? mysqlHost : "NOT SET");
         logger.info("MYSQLDATABASE: {}", mysqlDatabase != null && !mysqlDatabase.isEmpty() ? mysqlDatabase : "NOT SET");
         logger.info("MYSQLUSER: {}", mysqlUser != null && !mysqlUser.isEmpty() ? "SET" : "NOT SET");
-        
+
         // Priority 1: If Railway's MYSQLDATABASE_URL is provided, parse it
         if (mysqlDatabaseUrl != null && !mysqlDatabaseUrl.isEmpty()) {
             try {
@@ -67,7 +68,7 @@ public class DatabaseConfig {
                 String host = dbUri.getHost();
                 int port = dbUri.getPort() == -1 ? 3306 : dbUri.getPort();
                 String database = dbUri.getPath().replaceFirst("/", "");
-                
+
                 String jdbcUrl = "jdbc:mysql://" + host + ":" + port + "/" + database;
                 properties.setUrl(jdbcUrl);
                 properties.setUsername(username);
@@ -79,10 +80,10 @@ public class DatabaseConfig {
                 // If parsing fails, continue to check individual variables
             }
         }
-        
+
         // Priority 2: Use Railway's individual MySQL variables
-        if (mysqlHost != null && !mysqlHost.isEmpty() && 
-            mysqlDatabase != null && !mysqlDatabase.isEmpty()) {
+        if (mysqlHost != null && !mysqlHost.isEmpty() &&
+                mysqlDatabase != null && !mysqlDatabase.isEmpty()) {
             String jdbcUrl = "jdbc:mysql://" + mysqlHost + ":" + mysqlPort + "/" + mysqlDatabase;
             properties.setUrl(jdbcUrl);
             if (mysqlUser != null && !mysqlUser.isEmpty()) {
@@ -94,14 +95,19 @@ public class DatabaseConfig {
             logger.info("Using Railway MySQL variables - Host: {}, Database: {}", mysqlHost, mysqlDatabase);
             return properties;
         }
-        
+
         // Priority 3: Check for SPRING_DATASOURCE_URL from environment
-        // BUT: Skip if it contains mysql.railway.internal (internal hostname that doesn't work locally)
+        // BUT: Skip if it contains mysql.railway.internal (internal hostname that
+        // doesn't work locally)
         String springUrl = System.getenv("SPRING_DATASOURCE_URL");
         String springUser = System.getenv("SPRING_DATASOURCE_USERNAME");
         String springPass = System.getenv("SPRING_DATASOURCE_PASSWORD");
-        
+
         if (springUrl != null && !springUrl.isEmpty() && !springUrl.contains("mysql.railway.internal")) {
+            // Fix for Render/Heroku URLs which might not start with jdbc:
+            if (!springUrl.startsWith("jdbc:")) {
+                springUrl = "jdbc:" + springUrl;
+            }
             properties.setUrl(springUrl);
             if (springUser != null && !springUser.isEmpty()) {
                 properties.setUsername(springUser);
@@ -113,12 +119,16 @@ public class DatabaseConfig {
             return properties;
         } else if (springUrl != null && springUrl.contains("mysql.railway.internal")) {
             logger.warn("SPRING_DATASOURCE_URL contains mysql.railway.internal (internal hostname). " +
-                      "Ignoring and falling back to application.properties.");
+                    "Ignoring and falling back to application.properties.");
         }
-        
+
         // Priority 4: Fall back to application.properties values
         if (appDataSourceUrl != null && !appDataSourceUrl.isEmpty()) {
-            properties.setUrl(appDataSourceUrl.trim());
+            String sanitizedUrl = appDataSourceUrl.trim();
+            if (!sanitizedUrl.startsWith("jdbc:")) {
+                sanitizedUrl = "jdbc:" + sanitizedUrl;
+            }
+            properties.setUrl(sanitizedUrl);
             if (appDataSourceUsername != null && !appDataSourceUsername.isEmpty()) {
                 properties.setUsername(appDataSourceUsername.trim());
             }
@@ -126,10 +136,10 @@ public class DatabaseConfig {
                 properties.setPassword(appDataSourcePassword.trim());
             }
             logger.info("Using database configuration from application.properties");
-            logger.info("URL: {}", appDataSourceUrl.replaceAll(":[^:@]+@", ":****@"));
+            logger.info("URL: {}", sanitizedUrl.replaceAll(":[^:@]+@", ":****@"));
             return properties;
         }
-        
+
         // If we get here, no database configuration was found
         logger.error("================================================");
         logger.error("DATABASE CONFIGURATION ERROR:");
@@ -140,18 +150,18 @@ public class DatabaseConfig {
         logger.error("3. Or set MYSQLHOST, MYSQLDATABASE, MYSQLUSER, MYSQLPASSWORD");
         logger.error("4. Or configure spring.datasource.* in application.properties");
         logger.error("================================================");
-        
+
         throw new IllegalStateException(
-            "Database configuration not found. Please link Railway MySQL service or set valid database connection variables. " +
-            "If SPRING_DATASOURCE_URL contains 'mysql.railway.internal', please unset it to use application.properties."
-        );
+                "Database configuration not found. Please link Railway MySQL service or set valid database connection variables. "
+                        +
+                        "If SPRING_DATASOURCE_URL contains 'mysql.railway.internal', please unset it to use application.properties.");
     }
 
     @Bean
     @Primary
     public DataSource dataSource(DataSourceProperties properties) {
-        logger.info("Creating DataSource with URL: {}", 
-                   properties.getUrl() != null ? properties.getUrl().replaceAll(":[^:@]+@", ":****@") : "null");
+        logger.info("Creating DataSource with URL: {}",
+                properties.getUrl() != null ? properties.getUrl().replaceAll(":[^:@]+@", ":****@") : "null");
         return properties.initializeDataSourceBuilder().build();
     }
 }
