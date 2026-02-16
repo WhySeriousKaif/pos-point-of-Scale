@@ -104,6 +104,29 @@ public class DatabaseConfig {
         String springPass = System.getenv("SPRING_DATASOURCE_PASSWORD");
 
         if (springUrl != null && !springUrl.isEmpty() && !springUrl.contains("mysql.railway.internal")) {
+            try {
+                if (springUrl.startsWith("postgres://") || springUrl.startsWith("postgresql://")) {
+                    logger.info("Parsing PostgreSQL URL from environment...");
+                    URI dbUri = new URI(springUrl);
+                    String username = dbUri.getUserInfo().split(":")[0];
+                    String password = dbUri.getUserInfo().split(":")[1];
+                    String host = dbUri.getHost();
+                    int port = dbUri.getPort() == -1 ? 5432 : dbUri.getPort();
+                    String database = dbUri.getPath().replaceFirst("/", "");
+
+                    String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database;
+                    properties.setUrl(jdbcUrl);
+                    properties.setUsername(username);
+                    properties.setPassword(password);
+                    properties.setDriverClassName("org.postgresql.Driver");
+                    logger.info("Parsed PostgreSQL URL. Host: {}, Port: {}, Database: {}", host, port, database);
+                    return properties;
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to parse PostgreSQL URL from environment: {}", e.getMessage());
+                // Fallback to simple JDBC prefixing if parsing fails
+            }
+
             // Fix for Render/Heroku URLs which might not start with jdbc:
             if (!springUrl.startsWith("jdbc:")) {
                 springUrl = "jdbc:" + springUrl;
