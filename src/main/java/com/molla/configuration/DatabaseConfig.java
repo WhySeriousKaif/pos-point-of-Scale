@@ -203,19 +203,59 @@ public class DatabaseConfig {
     public DataSource dataSource(DataSourceProperties properties) {
         String url = properties.getUrl();
         if (url != null) {
-            // Ensure JDBC prefix
-            if (!url.startsWith("jdbc:")) {
-                url = "jdbc:" + url;
-                properties.setUrl(url);
-            }
+            try {
+                String tempUrl = url;
+                if (url.startsWith("jdbc:")) {
+                    tempUrl = url.substring(5);
+                }
 
-            // Explicitly set driver based on URL
-            if (url.startsWith("jdbc:postgresql:")) {
-                properties.setDriverClassName("org.postgresql.Driver");
-                logger.info("Detected PostgreSQL URL, setting driver to org.postgresql.Driver");
-            } else if (url.startsWith("jdbc:mysql:")) {
-                properties.setDriverClassName("com.mysql.cj.jdbc.Driver");
-                logger.info("Detected MySQL URL, setting driver to com.mysql.cj.jdbc.Driver");
+                URI dbUri = new URI(tempUrl);
+                if (dbUri.getUserInfo() != null) {
+                    logger.info(
+                            "DataSource URL contains credentials. Parsing and stripping them for driver compatibility...");
+                    String[] userInfo = dbUri.getUserInfo().split(":");
+                    String username = userInfo[0];
+                    String password = userInfo.length > 1 ? userInfo[1] : "";
+                    String host = dbUri.getHost();
+                    int port = dbUri.getPort();
+                    String path = dbUri.getPath();
+                    String scheme = dbUri.getScheme();
+
+                    if ("postgres".equals(scheme)) {
+                        scheme = "postgresql";
+                    }
+
+                    String cleanJdbcUrl = "jdbc:" + scheme + "://" + host + (port != -1 ? ":" + port : "") + path;
+
+                    properties.setUrl(cleanJdbcUrl);
+                    properties.setUsername(username);
+                    properties.setPassword(password);
+
+                    if ("postgresql".equals(scheme)) {
+                        properties.setDriverClassName("org.postgresql.Driver");
+                    } else if ("mysql".equals(scheme)) {
+                        properties.setDriverClassName("com.mysql.cj.jdbc.Driver");
+                    }
+
+                    logger.info("Reconstructed Clean JDBC URL: {}", cleanJdbcUrl);
+                } else {
+                    // Even if no userInfo, ensure jdbc: prefix is there
+                    if (!url.startsWith("jdbc:")) {
+                        properties.setUrl("jdbc:" + url);
+                    }
+                    // Explicitly set driver based on URL if not set above
+                    if (properties.getUrl().contains("postgresql")) {
+                        properties.setDriverClassName("org.postgresql.Driver");
+                    } else if (properties.getUrl().contains("mysql")) {
+                        properties.setDriverClassName("com.mysql.cj.jdbc.Driver");
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to parse/clean URL in dataSource method: {}", e.getMessage());
+                // Fallback: Ensure jdbc prefix at minimum
+                if (!url.startsWith("jdbc:")) {
+                    properties.setUrl("jdbc:" + url);
+                }
             }
         }
 
