@@ -20,16 +20,17 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
+@jakarta.persistence.Table(name = "users")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column( nullable = false)
-    private  String fullName;
+    @Column(nullable = false)
+    private String fullName;
 
-    @Column( nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     @Email(message = "Email should be valid")
     private String email;
 
@@ -45,12 +46,13 @@ public class User {
     private String phone;
 
     @Column(nullable = false)
-    @Enumerated(EnumType.STRING) // EnumType.STRING means - the role is stored as a string in the database // EnumType.ORDINAL means - the role is stored as a number in the database
+    @Enumerated(EnumType.STRING) // EnumType.STRING means - the role is stored as a string in the database //
+                                 // EnumType.ORDINAL means - the role is stored as a number in the database
     private UserRole role;
 
     private LocalDateTime createdAt;
-    private  LocalDateTime updatedAt;
-    private  LocalDateTime lastLoginAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime lastLoginAt;
 
     public String getEmail() {
         return email;
@@ -63,6 +65,5 @@ public class User {
     public UserRole getRole() {
         return role;
     }
-
 
 }
