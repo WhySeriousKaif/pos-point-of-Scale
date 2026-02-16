@@ -161,11 +161,26 @@ public class DatabaseConfig {
     @Primary
     public DataSource dataSource(DataSourceProperties properties) {
         String url = properties.getUrl();
-        if (url != null && !url.startsWith("jdbc:")) {
-            properties.setUrl("jdbc:" + url);
+        if (url != null) {
+            // Ensure JDBC prefix
+            if (!url.startsWith("jdbc:")) {
+                url = "jdbc:" + url;
+                properties.setUrl(url);
+            }
+
+            // Explicitly set driver based on URL
+            if (url.startsWith("jdbc:postgresql:")) {
+                properties.setDriverClassName("org.postgresql.Driver");
+                logger.info("Detected PostgreSQL URL, setting driver to org.postgresql.Driver");
+            } else if (url.startsWith("jdbc:mysql:")) {
+                properties.setDriverClassName("com.mysql.cj.jdbc.Driver");
+                logger.info("Detected MySQL URL, setting driver to com.mysql.cj.jdbc.Driver");
+            }
         }
+
         logger.info("Creating DataSource with URL: {}",
                 properties.getUrl() != null ? properties.getUrl().replaceAll(":[^:@]+@", ":****@") : "null");
+
         return properties.initializeDataSourceBuilder().build();
     }
 }
