@@ -160,6 +160,10 @@ public class DatabaseConfig {
     @Bean
     @Primary
     public DataSource dataSource(DataSourceProperties properties) {
+        String url = properties.getUrl();
+        if (url != null && !url.startsWith("jdbc:")) {
+            properties.setUrl("jdbc:" + url);
+        }
         logger.info("Creating DataSource with URL: {}",
                 properties.getUrl() != null ? properties.getUrl().replaceAll(":[^:@]+@", ":****@") : "null");
         return properties.initializeDataSourceBuilder().build();
