@@ -77,6 +77,11 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
 
         <!-- Source: https://mvnrepository.com/artifact/com.razorpay/razorpay-java -->
         <dependency>
