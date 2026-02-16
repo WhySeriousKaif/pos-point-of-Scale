@@ -105,29 +105,47 @@ public class DatabaseConfig {
 
         if (springUrl != null && !springUrl.isEmpty() && !springUrl.contains("mysql.railway.internal")) {
             try {
-                if (springUrl.startsWith("postgres://") || springUrl.startsWith("postgresql://")) {
-                    logger.info("Parsing PostgreSQL URL from environment...");
-                    URI dbUri = new URI(springUrl);
-                    String username = dbUri.getUserInfo().split(":")[0];
-                    String password = dbUri.getUserInfo().split(":")[1];
-                    String host = dbUri.getHost();
-                    int port = dbUri.getPort() == -1 ? 5432 : dbUri.getPort();
-                    String database = dbUri.getPath().replaceFirst("/", "");
+                String tempUrl = springUrl;
+                if (springUrl.startsWith("jdbc:")) {
+                    tempUrl = springUrl.substring(5);
+                }
 
-                    String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database;
-                    properties.setUrl(jdbcUrl);
+                URI dbUri = new URI(tempUrl);
+                if (dbUri.getUserInfo() != null) {
+                    logger.info("Parsing database URL with credentials...");
+                    String[] userInfo = dbUri.getUserInfo().split(":");
+                    String username = userInfo[0];
+                    String password = userInfo.length > 1 ? userInfo[1] : "";
+                    String host = dbUri.getHost();
+                    int port = dbUri.getPort();
+                    String path = dbUri.getPath();
+                    String scheme = dbUri.getScheme();
+
+                    if ("postgres".equals(scheme)) {
+                        scheme = "postgresql";
+                    }
+
+                    String cleanJdbcUrl = "jdbc:" + scheme + "://" + host + (port != -1 ? ":" + port : "") + path;
+
+                    properties.setUrl(cleanJdbcUrl);
                     properties.setUsername(username);
                     properties.setPassword(password);
-                    properties.setDriverClassName("org.postgresql.Driver");
-                    logger.info("Parsed PostgreSQL URL. Host: {}, Port: {}, Database: {}", host, port, database);
+
+                    if ("postgresql".equals(scheme)) {
+                        properties.setDriverClassName("org.postgresql.Driver");
+                    } else if ("mysql".equals(scheme)) {
+                        properties.setDriverClassName("com.mysql.cj.jdbc.Driver");
+                    }
+
+                    logger.info("Parsed Database URL. Scheme: {}, Host: {}, Port: {}, Path: {}", scheme, host, port,
+                            path);
                     return properties;
                 }
             } catch (Exception e) {
-                logger.warn("Failed to parse PostgreSQL URL from environment: {}", e.getMessage());
-                // Fallback to simple JDBC prefixing if parsing fails
+                logger.warn("Failed to parse URL from environment: {}", e.getMessage());
             }
 
-            // Fix for Render/Heroku URLs which might not start with jdbc:
+            // Fallback for standard URLs or if parsing failed
             if (!springUrl.startsWith("jdbc:")) {
                 springUrl = "jdbc:" + springUrl;
             }
