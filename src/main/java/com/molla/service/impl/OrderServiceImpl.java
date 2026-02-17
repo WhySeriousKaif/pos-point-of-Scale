@@ -51,26 +51,24 @@ public class OrderServiceImpl implements OrderService {
             cashier = userService.getCurrentUser();
             branch = cashier.getBranch();
         } catch (Exception e) {
-            // No authenticated user - use defaults for testing
-            // Try to get branch from orderDto or use default branchId 1
-            Long branchId = orderDto.getBranchId() != null ? orderDto.getBranchId() : 1L;
-            branch = branchRepository.findById(branchId)
-                    .orElseThrow(
-                            () -> new Exception("Branch not found. Please provide a valid branchId or authenticate."));
+            // No authenticated user - check if IDs are provided in DTO
+            if (orderDto.getBranchId() != null) {
+                branch = branchRepository.findById(orderDto.getBranchId())
+                        .orElseThrow(() -> new Exception("Branch not found with ID: " + orderDto.getBranchId()));
+            }
 
-            // Try to get cashier from orderDto or use default userId 1
-            Long cashierId = orderDto.getCashierId() != null ? orderDto.getCashierId() : 1L;
-            cashier = userRepository.findById(cashierId)
-                    .orElseThrow(() -> new Exception(
-                            "Cashier not found. Please provide a valid cashierId or authenticate."));
+            if (orderDto.getCashierId() != null) {
+                cashier = userRepository.findById(orderDto.getCashierId())
+                        .orElseThrow(() -> new Exception("Cashier not found with ID: " + orderDto.getCashierId()));
+            }
         }
 
         if (branch == null) {
-            throw new Exception("Branch is required");
+            throw new Exception("Branch is required. Please authenticate or provide branchId.");
         }
 
         if (cashier == null) {
-            throw new Exception("Cashier is required");
+            throw new Exception("Cashier is required. Please authenticate or provide cashierId.");
         }
 
         // Get customer if customerId is provided
