@@ -23,37 +23,44 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 @Service
 @RequiredArgsConstructor
 public class StoreServiceImp implements StoreService {
 
-    private  final StoreRepository storeRepository;
+    private final StoreRepository storeRepository;
     private final UserService userService;
     private final EmployeeService employeeService;
+
     @Override
     public StoreDto createStore(StoreDto storeDto, User user) {
         // Check if user already has a store
         Store existingStore = storeRepository.findByStoreAdminId(user.getId());
-        if(existingStore != null) {
+        if (existingStore != null) {
             throw new BadRequestException("User already has a store. One user can only have one store.");
         }
-        
+
         Store store = StoreMapper.toEntity(storeDto, user);
-        return StoreMapper.toDTO(storeRepository.save(store));
+        Store savedStore = storeRepository.save(store);
+
+        // Update user to link to this store
+        user.setStore(savedStore);
+        userService.updateUser(user); // Assuming updateUser method exists or use repository
+
+        return StoreMapper.toDTO(savedStore);
     }
 
     @Override
     @Cacheable(cacheNames = "stores", key = "#id")
     public StoreDto getStoreById(Long id) {
-        Store store=storeRepository.findById(id).orElseThrow(() -> new NotFoundException("Store not found with id: " + id));
+        Store store = storeRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Store not found with id: " + id));
         return StoreMapper.toDTO(store);
     }
 
     @Override
     @Cacheable(cacheNames = "storesAll")
     public List<StoreDto> getAllStores() {
-        List<Store> dtos=storeRepository.findAll();
+        List<Store> dtos = storeRepository.findAll();
         return dtos.stream().map(StoreMapper::toDTO).collect(Collectors.toList());
 
     }
@@ -62,7 +69,7 @@ public class StoreServiceImp implements StoreService {
     @Cacheable(cacheNames = "storesByAdmin", key = "#user.id")
     public StoreDto getStoreByAdmin(User user) {
         Store store = storeRepository.findByStoreAdminId(user.getId());
-        if(store == null) {
+        if (store == null) {
             throw new NotFoundException("Store not found for this admin. Please create a store first.");
         }
         return StoreMapper.toDTO(store);
@@ -77,13 +84,14 @@ public class StoreServiceImp implements StoreService {
     }
 
     @Override
-    @CacheEvict(cacheNames = {"stores", "storesByAdmin", "storesAll"}, allEntries = true)
+    @CacheEvict(cacheNames = { "stores", "storesByAdmin", "storesAll" }, allEntries = true)
     public StoreDto updateStore(Long id, StoreDto storeDto) {
         User currentUser = userService.getCurrentUser();
         Store existingStore = storeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Store not found with id: " + id));
 
-        // 🔐 Authorization: Super admin can update any store; store admin can only update their own store
+        // 🔐 Authorization: Super admin can update any store; store admin can only
+        // update their own store
         if (currentUser.getRole().equals(UserRole.ROLE_ADMIN)) {
             // Super admin: allow updating any store
         } else if (currentUser.getRole().equals(UserRole.ROLE_STORE_ADMIN)) {
@@ -113,7 +121,7 @@ public class StoreServiceImp implements StoreService {
     }
 
     @Override
-    @CacheEvict(cacheNames = {"stores", "storesByAdmin", "storesAll"}, allEntries = true)
+    @CacheEvict(cacheNames = { "stores", "storesByAdmin", "storesAll" }, allEntries = true)
     public void deleteStore(Long id) {
         User currentUser = userService.getCurrentUser();
         if (!currentUser.getRole().equals(UserRole.ROLE_ADMIN)) {
@@ -127,15 +135,16 @@ public class StoreServiceImp implements StoreService {
     @Override
     public StoreDto getStoreByEmployee(String brand) {
         User currentUser = userService.getCurrentUser();
-        if(currentUser == null){
-            throw new BadRequestException("You don't have permission to access this store"); 
+        if (currentUser == null) {
+            throw new BadRequestException("You don't have permission to access this store");
         }
         Store store = currentUser.getStore();
-        if(store == null) {
+        if (store == null) {
             throw new NotFoundException("Store not found for this employee");
         }
         return StoreMapper.toDTO(store);
     }
+
     @Override
     public StoreDto moderateStore(Long id, StoreStatus storeStatus) {
         // 🔐 Authorization: Only Super Admin (ROLE_ADMIN) can moderate stores
@@ -143,7 +152,7 @@ public class StoreServiceImp implements StoreService {
         if (currentUser == null || !currentUser.getRole().equals(UserRole.ROLE_ADMIN)) {
             throw new BadRequestException("Only Super Admin can moderate stores");
         }
-        
+
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Store not found with id: " + id));
         store.setStoreStatus(storeStatus);

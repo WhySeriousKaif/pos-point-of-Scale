@@ -26,11 +26,11 @@ public class UserServiceImp implements UserService {
         if (cleanToken.startsWith("Bearer ")) {
             cleanToken = cleanToken.substring(7).trim();
         }
-        
+
         if (cleanToken.isEmpty()) {
             throw new NotFoundException("JWT token is required");
         }
-        
+
         String email = jwtUtil.extractEmail(cleanToken);
         User user = userRepository.findByEmail(email);
         if (user == null) {
@@ -69,5 +69,10 @@ public class UserServiceImp implements UserService {
     @Cacheable(cacheNames = "usersAll")
     public List<User> getAllUsers() {
         return userRepository.findAll();
+    }
+
+    @Override
+    public User updateUser(User user) {
+        return userRepository.save(user);
     }
 }
