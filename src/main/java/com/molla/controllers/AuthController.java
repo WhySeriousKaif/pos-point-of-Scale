@@ -60,11 +60,11 @@ public class AuthController {
     private MailService mailService;
 
     public AuthController(AuthenticationManager authManager,
-                          JwtUtil jwtUtil,
-                          UserRepository userRepository,
-                          PasswordEncoder passwordEncoder,
-                          BranchRepository branchRepository,
-                          StoreRepository storeRepository) {
+            JwtUtil jwtUtil,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            BranchRepository branchRepository,
+            StoreRepository storeRepository) {
         this.authManager = authManager;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
@@ -89,8 +89,7 @@ public class AuthController {
      * 
      * 📌 Security: Password is hashed before saving (never store plain passwords)
      */
-    @Operation(summary = "Register a new user", 
-               description = "Register a new user. Returns the created user with JWT token.")
+    @Operation(summary = "Register a new user", description = "Register a new user. Returns the created user with JWT token.")
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         // 🔍 Step 1: Check if user already exists
@@ -107,7 +106,7 @@ public class AuthController {
         // 👤 Step 3: Create new user entity
         User newUser = new User();
         newUser.setEmail(request.getEmail());
-        newUser.setPassword(passwordEncoder.encode(request.getPassword()));  // 🔐 Hash password
+        newUser.setPassword(passwordEncoder.encode(request.getPassword())); // 🔐 Hash password
         newUser.setRole(request.getRole());
         newUser.setFullName(request.getFullName());
         newUser.setPhone(request.getPhone());
@@ -115,12 +114,14 @@ public class AuthController {
         newUser.setCreatedAt(LocalDateTime.now());
         newUser.setUpdatedAt(LocalDateTime.now());
 
-        // 🏢 Step 3.5: Assign branch and store for branch managers
+        // 🏢 Step 3.5: Assign branch and store for branch/store managers
         Branch branchToUpdate = null;
+
         if (request.getRole().equals(UserRole.ROLE_BRANCH_MANAGER)) {
             if (request.getBranchId() != null) {
                 Branch branch = branchRepository.findById(request.getBranchId())
-                        .orElseThrow(() -> new BadRequestException("Branch not found with id: " + request.getBranchId()));
+                        .orElseThrow(
+                                () -> new BadRequestException("Branch not found with id: " + request.getBranchId()));
                 newUser.setBranch(branch);
                 newUser.setStore(branch.getStore());
                 // Save branch reference for later (after user is saved)
@@ -131,18 +132,26 @@ public class AuthController {
                         .orElseThrow(() -> new BadRequestException("Store not found with id: " + request.getStoreId()));
                 newUser.setStore(store);
             }
+        } else if (request.getRole().equals(UserRole.ROLE_STORE_MANAGER)) {
+            if (request.getStoreId() != null) {
+                Store store = storeRepository.findById(request.getStoreId())
+                        .orElseThrow(() -> new BadRequestException("Store not found with id: " + request.getStoreId()));
+                newUser.setStore(store);
+            } else {
+                throw new BadRequestException("Store ID is required for Store Manager");
+            }
         }
 
-        // 💾 Step 4: Save user to database FIRST (must be saved before setting as branch manager)
+        // 💾 Step 4: Save user to database FIRST
         newUser = userRepository.save(newUser);
 
-        // 🔗 Step 4.5: Set branch manager AFTER user is saved (to avoid TransientObjectException)
+        // 🔗 Step 4.5: Set branch manager AFTER user is saved
         if (branchToUpdate != null) {
             branchToUpdate.setManager(newUser);
             branchRepository.save(branchToUpdate);
         }
 
-        // 📧 Step 5: Send welcome email (best-effort – failures are ignored so signup still works)
+        // 📧 Step 5: Send welcome email
         if (mailService != null) {
             try {
                 mailService.sendSimpleMail(
@@ -151,18 +160,16 @@ public class AuthController {
                         "Hi " + newUser.getFullName() + ",\n\n" +
                                 "Your account has been created successfully.\n\n" +
                                 "Role: " + newUser.getRole() + "\n\n" +
-                                "Regards,\nMolla POS System"
-                );
+                                "Regards,\nMolla POS System");
             } catch (Exception e) {
-                // ⚠️ Email failure doesn't break signup
                 System.out.println("Failed to send welcome email: " + e.getMessage());
             }
         }
 
-        // 🎫 Step 6: Generate JWT token (email + role)
+        // 🎫 Step 6: Generate JWT token
         String token = jwtUtil.generateToken(newUser.getEmail(), newUser.getRole().toString());
 
-        // 📦 Step 7: Build response with token + user details
+        // 📦 Step 7: Build response
         AuthResponse authResponse = new AuthResponse();
         authResponse.setJwt(token);
         authResponse.setMessage("User registered successfully");
@@ -183,10 +190,10 @@ public class AuthController {
      * 5. Generate JWT token
      * 6. Return AuthResponse with token + user details
      * 
-     * 📌 Security: AuthenticationManager handles password verification (BCrypt comparison)
+     * 📌 Security: AuthenticationManager handles password verification (BCrypt
+     * comparison)
      */
-    @Operation(summary = "Login user", 
-               description = "Authenticate user and receive JWT token. Returns token and user details.")
+    @Operation(summary = "Login user", description = "Authenticate user and receive JWT token. Returns token and user details.")
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
 
@@ -195,8 +202,7 @@ public class AuthController {
         // 🔹 Throws exception if credentials are invalid
         try {
             authManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-            );
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         } catch (Exception e) {
             // ❌ Invalid credentials → Return 400 Bad Request
             throw new BadRequestException("Invalid email or password");

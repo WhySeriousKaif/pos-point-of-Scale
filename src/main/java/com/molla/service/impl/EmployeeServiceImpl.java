@@ -60,12 +60,18 @@ public class EmployeeServiceImpl implements EmployeeService {
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
 
-        // 🔐 Authorization: Super admin can add to any branch; store admin can only add to branches in their store; branch manager can only add to their branch
+        // 🔐 Authorization: Super admin can add to any branch; store admin can only add
+        // to branches in their store; branch manager can only add to their branch
         User currentUser = userService.getCurrentUser();
         if (currentUser.getRole().equals(UserRole.ROLE_STORE_ADMIN)) {
             // Store admin: verify branch belongs to their store
             Store userStore = storeRepository.findByStoreAdminId(currentUser.getId());
             if (userStore == null || !branch.getStore().getId().equals(userStore.getId())) {
+                throw new BadRequestException("You can only add employees to branches in your store");
+            }
+        } else if (currentUser.getRole().equals(UserRole.ROLE_STORE_MANAGER)) {
+            // Store manager: verify branch belongs to their store
+            if (currentUser.getStore() == null || !branch.getStore().getId().equals(currentUser.getStore().getId())) {
                 throw new BadRequestException("You can only add employees to branches in your store");
             }
         } else if (currentUser.getRole().equals(UserRole.ROLE_BRANCH_MANAGER)) {
@@ -74,7 +80,8 @@ public class EmployeeServiceImpl implements EmployeeService {
                 throw new BadRequestException("You can only add employees to your own branch");
             }
         } else if (!currentUser.getRole().equals(UserRole.ROLE_ADMIN)) {
-            throw new BadRequestException("Only Super Admin, Store Admin, or Branch Manager can add branch employees");
+            throw new BadRequestException(
+                    "Only Super Admin, Store Admin, Store Manager or Branch Manager can add branch employees");
         }
 
         if (employeeDetails.getRole() == UserRole.ROLE_BRANCH_CASHIER
@@ -106,11 +113,13 @@ public class EmployeeServiceImpl implements EmployeeService {
                 throw new BadRequestException("You are not assigned to a branch");
             }
             // If updating branchId, verify it's the manager's branch
-            if (employeeDetails.getBranchId() != null && !employeeDetails.getBranchId().equals(currentUser.getBranch().getId())) {
+            if (employeeDetails.getBranchId() != null
+                    && !employeeDetails.getBranchId().equals(currentUser.getBranch().getId())) {
                 throw new BadRequestException("You can only assign employees to your own branch");
             }
             // If employee already has a branch, verify it's the manager's branch
-            if (existingUser.getBranch() != null && !existingUser.getBranch().getId().equals(currentUser.getBranch().getId())) {
+            if (existingUser.getBranch() != null
+                    && !existingUser.getBranch().getId().equals(currentUser.getBranch().getId())) {
                 throw new BadRequestException("You can only update employees in your own branch");
             }
         }
@@ -151,7 +160,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         return userRepository.findByStore(store)
                 .stream()
                 .filter(user -> role == null || user.getRole().equals(role)) //
-                .map(UserMapper::toDto) //.map(user -> UserMapper.toDto(user))
+                .map(UserMapper::toDto) // .map(user -> UserMapper.toDto(user))
                 .collect(Collectors.toList());
     }
 
