@@ -170,7 +170,21 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
         List<User> employees = userRepository.findByBranchId(branchId);
         return employees.stream()
-                .filter(user -> role == null || user.getRole().equals(role))
+                .filter(user -> {
+                    if (role == null)
+                        return true;
+                    if (user.getRole().equals(role))
+                        return true;
+
+                    // Alias: If searching for ROLE_CASHIER, also include ROLE_BRANCH_CASHIER
+                    if (role == UserRole.ROLE_CASHIER && user.getRole() == UserRole.ROLE_BRANCH_CASHIER) {
+                        return true;
+                    }
+                    // Alias: If searching for ROLE_BRANCH_MANAGER, also include ROLE_STORE_MANAGER?
+                    // No, distinct roles.
+
+                    return false;
+                })
                 .map(UserMapper::toDto)
                 .collect(Collectors.toList());
     }
