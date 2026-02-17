@@ -21,7 +21,8 @@ public class ProductController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto productDto,@RequestHeader(value = "Authorization", required = false) String jwt) throws UserException {
+    public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto productDto,
+            @RequestHeader(value = "Authorization", required = false) String jwt) throws UserException {
         User user = null;
         if (jwt != null && !jwt.isEmpty()) {
             try {
@@ -31,8 +32,12 @@ public class ProductController {
                 // GlobalExceptionHandler will catch and format exceptions from service layer
             }
         }
-        ProductDto createdProduct = productService.createProduct(productDto, user);
-        return ResponseEntity.ok(createdProduct);
+    }}
+
+    // Auto-set storeId from logged-in user if not provided
+    if(user!=null&&user.getStore()!=null&&productDto.getStoreId()==null){productDto.setStoreId(user.getStore().getId());}
+
+    ProductDto createdProduct = productService.createProduct(productDto, user);return ResponseEntity.ok(createdProduct);
     }
 
     @PutMapping("/{id}")
@@ -40,28 +45,32 @@ public class ProductController {
         User user = userService.getUserFromJwt(jwt);
         return ResponseEntity.ok(productService.updateProduct(id,productDto,user));
     }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse> deleteProduct(@PathVariable("id") Long id,@RequestHeader("Authorization") String jwt) throws UserException {
-        productService.deleteProduct(id,null);
-        ApiResponse apiResponse=new ApiResponse("Product deleted successfully");
+    public ResponseEntity<ApiResponse> deleteProduct(@PathVariable("id") Long id,
+            @RequestHeader("Authorization") String jwt) throws UserException {
+        productService.deleteProduct(id, null);
+        ApiResponse apiResponse = new ApiResponse("Product deleted successfully");
         return ResponseEntity.ok(apiResponse);
     }
 
-
     @GetMapping("/storeId/{storeId}")
-    public ResponseEntity<List<ProductDto>> getProductsByStoreId(@PathVariable("storeId") Long storeId,@RequestHeader("Authorization") String jwt) throws UserException {
+    public ResponseEntity<List<ProductDto>> getProductsByStoreId(@PathVariable("storeId") Long storeId,
+            @RequestHeader("Authorization") String jwt) throws UserException {
         return ResponseEntity.ok(productService.getProductsById(storeId));
     }
-    
 
     @GetMapping("/search/{storeId}/{keyword}")
-    public ResponseEntity<List<ProductDto>> searchByKeyword(@PathVariable("storeId") Long storeId, @PathVariable("keyword") String keyword,@RequestHeader("Authorization") String jwt) throws UserException {
-        return ResponseEntity.ok(productService.searchByKeyword(storeId,keyword));
+    public ResponseEntity<List<ProductDto>> searchByKeyword(@PathVariable("storeId") Long storeId,
+            @PathVariable("keyword") String keyword, @RequestHeader("Authorization") String jwt) throws UserException {
+        return ResponseEntity.ok(productService.searchByKeyword(storeId, keyword));
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<ProductDto>> getAllProducts(@RequestHeader(value = "Authorization", required = false) String jwt) throws UserException {
-        // If JWT is provided, use user's store, otherwise use default storeId (1) for testing
+    public ResponseEntity<List<ProductDto>> getAllProducts(
+            @RequestHeader(value = "Authorization", required = false) String jwt) throws UserException {
+        // If JWT is provided, use user's store, otherwise use default storeId (1) for
+        // testing
         Long storeId = 1L;
         if (jwt != null && !jwt.isEmpty()) {
             try {
@@ -74,7 +83,7 @@ public class ProductController {
         }
         return ResponseEntity.ok(productService.getAllProducts(storeId));
     }
-    
+
     // Public endpoint for testing (doesn't require authentication)
     @GetMapping("/public/all")
     public ResponseEntity<List<ProductDto>> getAllProductsPublic() {
@@ -85,6 +94,5 @@ public class ProductController {
             return ResponseEntity.ok(List.of());
         }
     }
-    
-    
+
 }
