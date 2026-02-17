@@ -146,6 +146,7 @@ public class StoreServiceImp implements StoreService {
     }
 
     @Override
+    @CacheEvict(cacheNames = { "stores", "storesByAdmin", "storesAll" }, allEntries = true)
     public StoreDto moderateStore(Long id, StoreStatus storeStatus) {
         // 🔐 Authorization: Only Super Admin (ROLE_ADMIN) can moderate stores
         User currentUser = userService.getCurrentUser();
