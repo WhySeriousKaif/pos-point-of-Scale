@@ -46,7 +46,7 @@ public class OrderServiceImpl implements OrderService {
         // Get current user (cashier) - handle case where no authentication
         User cashier = null;
         Branch branch = null;
-        
+
         try {
             cashier = userService.getCurrentUser();
             branch = cashier.getBranch();
@@ -55,18 +55,20 @@ public class OrderServiceImpl implements OrderService {
             // Try to get branch from orderDto or use default branchId 1
             Long branchId = orderDto.getBranchId() != null ? orderDto.getBranchId() : 1L;
             branch = branchRepository.findById(branchId)
-                .orElseThrow(() -> new Exception("Branch not found. Please provide a valid branchId or authenticate."));
-            
+                    .orElseThrow(
+                            () -> new Exception("Branch not found. Please provide a valid branchId or authenticate."));
+
             // Try to get cashier from orderDto or use default userId 1
             Long cashierId = orderDto.getCashierId() != null ? orderDto.getCashierId() : 1L;
             cashier = userRepository.findById(cashierId)
-                .orElseThrow(() -> new Exception("Cashier not found. Please provide a valid cashierId or authenticate."));
+                    .orElseThrow(() -> new Exception(
+                            "Cashier not found. Please provide a valid cashierId or authenticate."));
         }
-        
+
         if (branch == null) {
             throw new Exception("Branch is required");
         }
-        
+
         if (cashier == null) {
             throw new Exception("Cashier is required");
         }
@@ -75,17 +77,17 @@ public class OrderServiceImpl implements OrderService {
         Customer customer = null;
         if (orderDto.getCustomerId() != null) {
             customer = customerRepository.findById(orderDto.getCustomerId())
-                .orElseThrow(() -> new Exception("Customer not found"));
+                    .orElseThrow(() -> new Exception("Customer not found"));
         }
 
         // Create order
         Order order = Order.builder()
-            .branch(branch)
-            .cashier(cashier)
-            .customer(customer)
-            .paymentType(orderDto.getPaymentType())
-            .status(orderDto.getStatus() != null ? orderDto.getStatus() : OrderStatus.PENDING)
-            .build();
+                .branch(branch)
+                .cashier(cashier)
+                .customer(customer)
+                .paymentType(orderDto.getPaymentType())
+                .status(orderDto.getStatus() != null ? orderDto.getStatus() : OrderStatus.PENDING)
+                .build();
 
         // Create order items
         if (orderDto.getOrderItems() == null || orderDto.getOrderItems().isEmpty()) {
@@ -102,28 +104,39 @@ public class OrderServiceImpl implements OrderService {
             } else {
                 throw new RuntimeException("Product ID is required for order item");
             }
-            
+
             Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
-            
-            Double itemPrice = itemDto.getPrice() != null ? itemDto.getPrice() : product.getPrice();
+                    .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+
+            Double itemPrice = itemDto.getPrice();
+            if (itemPrice == null) {
+                if (product.getPrice() != null) {
+                    itemPrice = product.getPrice();
+                } else if (product.getSellingPrice() != null) {
+                    itemPrice = product.getSellingPrice();
+                } else if (product.getMrp() != null) {
+                    itemPrice = product.getMrp();
+                } else {
+                    throw new RuntimeException("Product price is missing for product: " + product.getName());
+                }
+            }
             Integer quantity = itemDto.getQuantity() != null ? itemDto.getQuantity() : 1;
             Double totalPrice = itemPrice * quantity;
 
             return OrderItem.builder()
-                .product(product)
-                .quantity(quantity)
-                .price(itemPrice)
-                .totalPrice(totalPrice)
-                .order(order)
-                .build();
+                    .product(product)
+                    .quantity(quantity)
+                    .price(itemPrice)
+                    .totalPrice(totalPrice)
+                    .order(order)
+                    .build();
         }).collect(Collectors.toList());
 
         // Calculate total amount
         double totalAmount = orderItems.stream()
-            .mapToDouble(item -> item.getTotalPrice() != null ? item.getTotalPrice() : 0.0)
-            .sum();
-        
+                .mapToDouble(item -> item.getTotalPrice() != null ? item.getTotalPrice() : 0.0)
+                .sum();
+
         order.setTotalAmount(totalAmount);
         order.setOrderItems(orderItems);
 
@@ -133,11 +146,11 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @CacheEvict(cacheNames = {"orders", "recentOrdersByBranch"}, allEntries = true)
+    @CacheEvict(cacheNames = { "orders", "recentOrdersByBranch" }, allEntries = true)
     public OrderDto updateOrder(Long id, OrderDto orderDto) throws Exception {
         Order order = orderRepository.findById(id)
-            .orElseThrow(() -> new Exception("Order not found"));
-        
+                .orElseThrow(() -> new Exception("Order not found"));
+
         // Update order fields
         if (orderDto.getPaymentType() != null) {
             order.setPaymentType(orderDto.getPaymentType());
@@ -145,16 +158,16 @@ public class OrderServiceImpl implements OrderService {
         if (orderDto.getStatus() != null) {
             order.setStatus(orderDto.getStatus());
         }
-        
+
         Order updatedOrder = orderRepository.save(order);
         return OrderMapper.toDto(updatedOrder);
     }
 
     @Override
-    @CacheEvict(cacheNames = {"orders", "recentOrdersByBranch"}, allEntries = true)
+    @CacheEvict(cacheNames = { "orders", "recentOrdersByBranch" }, allEntries = true)
     public void deleteOrder(Long id) throws Exception {
         Order order = orderRepository.findById(id)
-            .orElseThrow(() -> new Exception("Order not found with id " + id));
+                .orElseThrow(() -> new Exception("Order not found with id " + id));
         orderRepository.delete(order);
     }
 
@@ -162,26 +175,29 @@ public class OrderServiceImpl implements OrderService {
     @Cacheable(cacheNames = "orders", key = "#id")
     public OrderDto getOrderById(Long id) throws Exception {
         Order order = orderRepository.findById(id)
-            .orElseThrow(() -> new Exception("Order not found"));
+                .orElseThrow(() -> new Exception("Order not found"));
         return OrderMapper.toDto(order);
     }
 
     @Override
-    public List<OrderDto> getOrdersByBranch(Long branchId, Long customerId, Long cashierId, PaymentType paymentType, OrderStatus orderStatus) throws Exception {
+    public List<OrderDto> getOrdersByBranch(Long branchId, Long customerId, Long cashierId, PaymentType paymentType,
+            OrderStatus orderStatus) throws Exception {
         return orderRepository.findByBranchId(branchId).stream()
-            .filter(order -> customerId == null || (order.getCustomer() != null && order.getCustomer().getId().equals(customerId)))
-            .filter(order -> cashierId == null || (order.getCashier() != null && order.getCashier().getId().equals(cashierId)))
-            .filter(order -> paymentType == null || order.getPaymentType() == paymentType)
-            .filter(order -> orderStatus == null || order.getStatus() == orderStatus)
-            .map(OrderMapper::toDto)
-            .collect(Collectors.toList());
+                .filter(order -> customerId == null
+                        || (order.getCustomer() != null && order.getCustomer().getId().equals(customerId)))
+                .filter(order -> cashierId == null
+                        || (order.getCashier() != null && order.getCashier().getId().equals(cashierId)))
+                .filter(order -> paymentType == null || order.getPaymentType() == paymentType)
+                .filter(order -> orderStatus == null || order.getStatus() == orderStatus)
+                .map(OrderMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<OrderDto> getOrdersByCashier(Long cashierId) throws Exception {
         return orderRepository.findByCashierId(cashierId).stream()
-            .map(OrderMapper::toDto)
-            .collect(Collectors.toList());
+                .map(OrderMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -189,31 +205,34 @@ public class OrderServiceImpl implements OrderService {
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.plusDays(1).atStartOfDay();
-        
+
         return orderRepository.findByBranchIdAndCreatedAtBetween(branchId, start, end).stream()
-            .map(OrderMapper::toDto)
-            .collect(Collectors.toList());
+                .map(OrderMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<OrderDto> getOrderByCustomerId(Long customerId) throws Exception {
         return orderRepository.findByCustomerId(customerId).stream()
-            .map(OrderMapper::toDto)
-            .collect(Collectors.toList());
+                .map(OrderMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Cacheable(cacheNames = "recentOrdersByBranch", key = "#branchId")
     public List<OrderDto> getTop5RecentOrdersByBranchId(Long branchId) throws Exception {
         return orderRepository.findTop5ByBranchIdOrderByCreatedAtDesc(branchId).stream()
-            .map(OrderMapper::toDto)
-            .collect(Collectors.toList());
+                .map(OrderMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Page<OrderDto> getOrdersByBranchPaged(Long branchId, int page, int size, String sortBy, String direction) throws Exception {
-        if (page < 0) page = 0;
-        if (size <= 0 || size > 100) size = 10;
+    public Page<OrderDto> getOrdersByBranchPaged(Long branchId, int page, int size, String sortBy, String direction)
+            throws Exception {
+        if (page < 0)
+            page = 0;
+        if (size <= 0 || size > 100)
+            size = 10;
         if (sortBy == null || sortBy.isBlank()) {
             sortBy = "createdAt";
         }

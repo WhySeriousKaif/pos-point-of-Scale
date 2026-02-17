@@ -23,11 +23,11 @@ public class RazorPay {
         // Logic to create order using RazorPay API
         RazorpayClient razorpayClient = new RazorpayClient(apiKey, apiSecret);
         JSONObject orderRequest = new JSONObject();
-        orderRequest.put("amount", amount.intValue() * 100); // amount in the smallest currency unit (paise)
+        orderRequest.put("amount", Math.round(amount * 100)); // amount in the smallest currency unit (paise)
         orderRequest.put("currency", currency);
         orderRequest.put("receipt", receipt);
         Order order = razorpayClient.orders.create(orderRequest);
-        
+
         // Convert Order to Map for response
         Map<String, Object> orderResponse = new HashMap<>();
         orderResponse.put("id", order.get("id"));
@@ -36,7 +36,7 @@ public class RazorPay {
         orderResponse.put("receipt", order.get("receipt"));
         orderResponse.put("status", order.get("status"));
         orderResponse.put("created_at", order.get("created_at"));
-        
+
         return orderResponse;
     }
 
